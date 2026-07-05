@@ -26,19 +26,33 @@
             content: '';
             position: absolute;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(5px);
             z-index: 0;
         }
-        body::before { width: 300px; height: 300px; top: -50px; right: -50px; background: rgba(241, 196, 15, 0.3); }
-        body::after { width: 400px; height: 400px; bottom: -100px; left: -100px; background: rgba(46, 204, 113, 0.2); }
+        body::before { 
+            width: 300px; 
+            height: 300px; 
+            top: -50px; 
+            right: -50px; 
+            background: rgba(241, 196, 15, 0.3); 
+        }
+        body::after { 
+            width: 400px; 
+            height: 400px; 
+            bottom: -100px; 
+            left: -100px; 
+            background: rgba(46, 204, 113, 0.2); 
+        }
 
         .container {
             background: rgba(255, 255, 255, 0.85);
             padding: 40px 30px;
             border-radius: 24px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            
+            /* Фикс для iOS/Safari */
+            -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
+            
             text-align: center;
             max-width: 450px;
             width: 90%;
@@ -49,7 +63,7 @@
         h1 {
             color: #2c3e50;
             margin-bottom: 30px;
-            font-size: 2.5rem;
+            font-size: 2.2rem;
         }
 
         .btn-group {
@@ -68,6 +82,7 @@
             border-radius: 12px;
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            -webkit-tap-highlight-color: transparent; /* Убираем серое выделение при тапе на iOS */
         }
 
         .btn-yes {
@@ -85,10 +100,9 @@
         .btn-no {
             background: #e74c3c;
             color: white;
-            /* Изменяем позиционирование на absolute при первом же "шухере" */
             position: relative; 
             z-index: 10;
-            transition: all 0.1s ease-out; /* Очень быстрый побег */
+            transition: all 0.1s ease-out;
         }
 
         .sad-text {
@@ -168,18 +182,15 @@
 </head>
 <body>
 
-    <!-- ЭКРАН 1: Приглашение -->
     <div id="screen-invite" class="container">
-        <h1>Доброго времени суток! Когда идем за чаем? ☀️</h1>
+        <h1>Когда идем за чаем? ☀️</h1>
         <div class="btn-group">
             <button class="btn-yes" onclick="goToSecondScreen()">Пойду!</button>
-            <!-- Добавили события наведения мыши и касания для телефонов -->
-            <button id="runaway-btn" class="btn-no" onmouseover="runAway()" onclick="runAway()" ontouchstart="runAway()">Не пойду</button>
+            <button id="runaway-btn" class="btn-no" onmouseover="runAway()" onclick="runAway()" ontouchstart="runAway(event)">Не пойду</button>
         </div>
         <div id="sad-message" class="sad-text">так не пойдет -_-</div>
     </div>
 
-    <!-- ЭКРАН 2: Выбор даты -->
     <div id="screen-date" class="container hidden">
         <h1>Выбери день 📅</h1>
         <div class="days-grid">
@@ -198,28 +209,27 @@
         let selectedDate = "";
 
         // Функция побега кнопки
-        function runAway() {
+        function runAway(event) {
+            // Если событие вызвано тачем на смартфоне, предотвращаем стандартные жесты браузера
+            if (event && event.type === 'touchstart') {
+                event.preventDefault();
+            }
+
             const btn = document.getElementById('runaway-btn');
             const sadMessage = document.getElementById('sad-message');
             
-            // Показываем надпись "так не пойдет" при первой же попытке нажать
             sadMessage.classList.add('show');
-            
-            // Делаем позиционирование фиксированным, чтобы кнопка летала по всему экрану
             btn.style.position = 'fixed';
             
-            // Вычисляем случайные координаты с учетом размеров самой кнопки
             const btnWidth = btn.offsetWidth;
             const btnHeight = btn.offsetHeight;
             
-            // Ограничиваем область, чтобы кнопка не улетала за границы экрана
             const maxX = window.innerWidth - btnWidth - 20;
             const maxY = window.innerHeight - btnHeight - 20;
             
             const randomX = Math.max(20, Math.floor(Math.random() * maxX));
             const randomY = Math.max(20, Math.floor(Math.random() * maxY));
             
-            // Задаем новые координаты
             btn.style.left = randomX + 'px';
             btn.style.top = randomY + 'px';
         }
@@ -244,6 +254,9 @@
             readyBtn.innerText = "Отправка...";
             readyBtn.disabled = true;
 
+            // Классическое сложение строк для максимальной совместимости
+            var messageText = "Отличные новости! Ответ: ПОЙДУ. Выбранная дата: " + selectedDate;
+
             fetch("https://api.web3forms.com/submit", {
                 method: "POST",
                 headers: {
@@ -254,12 +267,12 @@
                     access_key: "83e34218-e1e2-4f24-81f3-5b587e60b389",
                     subject: "Ура! Выбрана дата для прогулки!",
                     to: "poznyak.dima2018@gmail.com", 
-                    message: `Отличные новости! Ответ: ПОЙДУ. Выбранная дата: ${selectedDate}`
+                    message: messageText
                 })
             })
-            .then(response => {
+            .then(function(response) {
                 if(response.ok) {
-                    alert(`Успешно отправлено! Выбранный день: ${selectedDate}`);
+                    alert("Успешно отправлено! Выбранный день: " + selectedDate);
                     readyBtn.innerText = "Отправлено! 🎉";
                 } else {
                     alert("Что-то пошло не так. Попробуй еще раз.");
@@ -267,7 +280,7 @@
                     readyBtn.disabled = false;
                 }
             })
-            .catch(error => {
+            .catch(function(error) {
                 console.error(error);
                 alert("Ошибка сети при отправке формы.");
                 readyBtn.innerText = "Готово ✅";
